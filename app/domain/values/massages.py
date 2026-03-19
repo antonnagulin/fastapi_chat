@@ -12,7 +12,7 @@ class Text(BaseValueObject):
         if not self.value:
             raise EmptyTextExeption()
 
-    def as_generic_type(self):
+    def as_generic_type(self) -> str:
         return str(self.value)
 
 
@@ -27,5 +27,5 @@ class Title(BaseValueObject):
         if len(self.value) > 255:
             raise TitleToLongExeption(self.value)
 
-    def as_generic_type(self):
+    def as_generic_type(self) -> str:
         return str(self.value)
