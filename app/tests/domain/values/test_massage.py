@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import pytest
-from domain.entities.massages import Chat, Massage
+from domain.entities.messages import Chat, Massage
 from domain.events.massages import NewMassageReceivedEvent
 from domain.exeptions.massages import TitleToLongExeption
 from domain.values.massages import Text, Title

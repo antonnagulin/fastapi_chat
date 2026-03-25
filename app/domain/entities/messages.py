@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from domain.entities.base import BaseEntity
-from domain.events.massages import NewMassageReceivedEvent
+from domain.events.massages import NewChatCreated, NewMassageReceivedEvent
 from domain.values.massages import Text, Title
 
 
@@ -37,3 +37,13 @@ class Chat(BaseEntity):
                 chat_oid=self.oid,
             )
         )
+        
+    @classmethod
+    def create_chat(cls, title: Title) -> 'Chat':
+        new_chat = cls(title=title)
+        new_chat.register_event(NewChatCreated(
+            chat_title=new_chat.title.as_generic_type(),
+            chat_oid=new_chat.oid
+        ))
+        return new_chat
+    
