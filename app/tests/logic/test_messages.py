@@ -2,7 +2,7 @@ import pytest
 from domain.entities.messages import Chat
 from domain.values.massages import Title
 from faker import Faker
-from infra.repositories.messages import BaseChatRepository
+from infra.repositories.messages.base import BaseChatRepository
 from logic.commands.messages import CreateChatCommand
 from logic.exeptions.massages import ChatWithThatTitleAlreadyExistsException
 from logic.mediator import Mediator
@@ -12,13 +12,15 @@ from logic.mediator import Mediator
 async def test_create_chat_command_success(
     chat_repository: BaseChatRepository,
     mediator: Mediator,
+    faker: Faker,
 ):
-    chat: Chat = (await 
-mediator.handle_command(CreateChatCommand(title='gigaTitle')))[0]
+    chat: Chat  
+    chat, *_ = await mediator.handle_command(CreateChatCommand(title=faker.text()))
+        
     
-    await chat_repository.add_chat(chat)
-    
-    assert await chat_repository.check_chat_exists_by_title(title=chat.title.as_generic_type())
+    assert await chat_repository.check_chat_exists_by_title(
+        title=chat.title.as_generic_type()
+    )
     
 
 @pytest.mark.asyncio
@@ -36,6 +38,7 @@ async def test_create_chat_command_title_alredy_exist(
     
     with pytest.raises(ChatWithThatTitleAlreadyExistsException):
         await mediator.handle_command(CreateChatCommand(title=title_text))
+        
     
     assert len(chat_repository._saved_chats) == 1
     

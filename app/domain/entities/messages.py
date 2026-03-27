@@ -8,25 +8,16 @@ from domain.values.massages import Text, Title
 
 @dataclass(eq=False)
 class Massage(BaseEntity):
-    created_at: datetime = field(
-        default_factory=datetime.now,
-        kw_only=True,
-    )
-
     text: Text
 
 
 @dataclass(eq=False)
 class Chat(BaseEntity):
-    massage: set[Massage] = field(
+    massages: set[Massage] = field(
         default_factory=set,
         kw_only=True,
     )
     title: Title
-    created_at: datetime = field(
-        default_factory=datetime.now,
-        kw_only=True,
-    )
 
     def add_massage(self, massage: Massage):
         self.massage.add(massage)
