@@ -1,12 +1,21 @@
 from functools import lru_cache
 
-from infra.repositories.messages.base import BaseChatRepository
-from infra.repositories.messages.mongo import MongoDBChatRepository
-from logic.commands.messages import CreateChatCommand, CreateChatCommandHandler
-from logic.mediator import Mediator
+from infra.repositories.messages.base import BaseChatsRepository, BaseMessagesRepository
+from infra.repositories.messages.mongo import (
+    MongoDBChatRepository,
+    MongoDBMessagesRepository,
+)
 from motor.motor_asyncio import AsyncIOMotorClient
 from punq import Container, Scope
 from settings.config import Config
+
+from logic.commands.messages import (
+    CreateChatCommand,
+    CreateChatCommandHandler,
+    CreateMessageCommand,
+    CreateMessageCommandHandler,
+)
+from logic.mediator import Mediator
 
 
 @lru_cache(1)
@@ -14,40 +23,60 @@ def init_cotainer():
     return _init_container()
 
 
-def _init_container()-> Container:
+def _init_container() -> Container:
     container = Container()
     
-    container.register(CreateChatCommandHandler)
     container.register(Config, instance=Config(), scope=Scope.singleton)
+    config: Config = container.resolve(Config)
 
-
-    def init_mediator():
-        mediator = Mediator()
-        
-        mediator.register_command(
-            CreateChatCommand,
-            [container.resolve(CreateChatCommandHandler)],
+    def create_motor_client():
+        return AsyncIOMotorClient(
+            config.mongodb_connection_uri, serverSelectionTimeoutMS=3000
         )
-        return mediator
+        
+    container.register(AsyncIOMotorClient, factory=create_motor_client, scope=Scope.singleton)
+    client = container.resolve(AsyncIOMotorClient)
+    
 
     def init_chat_mongo_db_repository():
-        config: Config = container.resolve(Config)
-        client = AsyncIOMotorClient(
-            config.mongodb_connection_uri,
-            serverSelectionTimeoutMS=3000
-        )
         return MongoDBChatRepository(
             mongo_db_client=client,
             mongo_db_name=config.mongodb_chat_database,
             mongo_db_collection_name=config.mongodb_chat_collection,
         )
-        
-    
+
+    def init_messages_mongo_db_repository():
+        return MongoDBMessagesRepository(
+            mongo_db_client=client,
+            mongo_db_name=config.mongodb_chat_database,
+            mongo_db_collection_name=config.mongodb_chat_collection,
+        )
+
     container.register(
-        BaseChatRepository,
-        factory=init_chat_mongo_db_repository,
+        BaseChatsRepository, factory=init_chat_mongo_db_repository, scope=Scope.singleton
+    )
+    container.register(
+        BaseMessagesRepository,
+        factory=init_messages_mongo_db_repository,
         scope=Scope.singleton
     )
-    container.register(Mediator, init_mediator)
     
+    container.register(CreateChatCommandHandler)
+    container.register(CreateMessageCommandHandler)
+
+    def init_mediator():
+        mediator = Mediator()
+        mediator.register_command(
+            CreateChatCommand,
+            [container.resolve(CreateChatCommandHandler)],
+        )
+        mediator.register_command(
+            CreateMessageCommand,
+            [container.resolve(CreateMessageCommandHandler)]
+        )
+        return mediator
+    
+
+    container.register(Mediator, init_mediator)
+
     return container

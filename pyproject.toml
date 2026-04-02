@@ -32,7 +32,7 @@ line-length = 88
 target-version = "py312"
 
 # Проверяем только ошибки PEP8, связанные с комментариями
-select = [
+lint.select = [
     "E",   # базовые ошибки PEP8 (включает E262, E265 для комментариев)
     "F",   # ошибки кода (undefined, unused)
     "I",   # сортировка импортов
@@ -40,7 +40,7 @@ select = [
 ]
 
 # Игнорируем проверки docstring
-ignore = [
+lint.ignore = [
     "D100",  # Missing docstring in module
     "D101",  # Missing docstring in class
     "D102",  # Missing docstring in __init__

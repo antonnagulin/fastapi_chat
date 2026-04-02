@@ -1,4 +1,5 @@
-# Chat (Fastapi)
+# Async Chat (Fastapi + MongoDB)
+
 
 ## Установка и запуск
 
@@ -11,7 +12,7 @@ cp .env.example .env
 2. Собрать и поднять контейнеры:
 
 ```bash
-make app
+make all
 ```
 
 - fastapi будет доступен на `http://localhost:8000`
