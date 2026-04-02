@@ -8,8 +8,9 @@ class ChatWithThatTitleAlreadyExistsException(LogicExeption):
     title: str
 
     @property
-    def massage(self):
+    def message(self):
         return f'Чат с таким низванием "{self.title}" уже существует.'
+
 
 @dataclass(eq=False)
 class ChatNotFoundExeption(LogicExeption):
@@ -17,4 +18,4 @@ class ChatNotFoundExeption(LogicExeption):
 
     @property
     def message(self):
-        return f'Чат c OID {self.chat_oid} не найден'
+        return f"Чат c OID {self.chat_oid} не найден"

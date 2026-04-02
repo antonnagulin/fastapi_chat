@@ -12,13 +12,13 @@ class BaseChatsRepository(ABC):
 
     @abstractmethod
     async def add_chat(self, chat: Chat) -> None: ...
-    
+
     @abstractmethod
     async def get_chat_by_oid(self, oid: str) -> Chat | None: ...
 
+
 @dataclass
 class BaseMessagesRepository(ABC):
-    
+
     @abstractmethod
-    async def add_message(self, chat_oid: str, message: Message) -> None:
-        ...
+    async def add_message(self, chat_oid: str, message: Message) -> None: ...

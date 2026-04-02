@@ -17,5 +17,5 @@ class CommandHandlersNotRegisteredException(LogicExeption):
     command_type: type
 
     @property
-    def massage(self):
+    def message(self):
         return f"Не удалось найти обработчик для команды: {self.command_type}"

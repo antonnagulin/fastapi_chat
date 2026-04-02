@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from application.api.massages.handlers import router as massage_router
+from application.api.messages.handlers import router as message_router
 
 
 def create_app() -> FastAPI:
@@ -10,5 +10,5 @@ def create_app() -> FastAPI:
         description="Simple kafka + ddd example.",
         debug=True,
     )
-    app.include_router(massage_router, prefix="/chat")
+    app.include_router(message_router, prefix="/chat")
     return app

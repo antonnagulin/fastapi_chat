@@ -20,7 +20,7 @@ def mediator(container: Container) -> Mediator:
 def chat_repository(container: Container) -> BaseChatsRepository:
     return container.resolve(BaseChatsRepository)
 
+
 @fixture()
 def message_repository(container: Container) -> BaseMessagesRepository:
     return container.resolve(BaseMessagesRepository)
-

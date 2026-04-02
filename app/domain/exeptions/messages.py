@@ -1,19 +1,19 @@
 from dataclasses import dataclass
 
-from .base import ApplicationExeption
+from .base import ApplicationException
 
 
 @dataclass(eq=False)
-class TitleToLongExeption(ApplicationExeption):
+class TitleToLongExeption(ApplicationException):
     text: str
 
     @property
-    def massage(self):
+    def message(self):
         return f"Слишком длинный текст сообщения {self.text[:255]}..."
 
 
 @dataclass(eq=False)
-class EmptyTextExeption(ApplicationExeption):
+class EmptyTextExeption(ApplicationException):
     @property
-    def massage(self):
+    def message(self):
         return "Текст не может быть пустым"

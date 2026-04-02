@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 
 @dataclass(eq=False)
-class ApplicationExeption(Exception):
+class ApplicationException(Exception):
 
     @property
-    def massage(self):
+    def message(self):
         return "Произошла ошибка приложения"

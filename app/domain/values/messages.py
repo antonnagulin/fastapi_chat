@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ..exeptions.massages import EmptyTextExeption, TitleToLongExeption
+from ..exeptions.messages import EmptyTextExeption, TitleToLongExeption
 from .base import BaseValueObject
 
 

@@ -1,10 +1,10 @@
 import pytest
 from domain.entities.messages import Chat
-from domain.values.massages import Title
+from domain.values.messages import Title
 from faker import Faker
 from infra.repositories.messages.base import BaseChatsRepository
 from logic.commands.messages import CreateChatCommand
-from logic.exeptions.massages import ChatWithThatTitleAlreadyExistsException
+from logic.exeptions.messages import ChatWithThatTitleAlreadyExistsException
 from logic.mediator import Mediator
 
 

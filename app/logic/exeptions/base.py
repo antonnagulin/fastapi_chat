@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
-from domain.exeptions.base import ApplicationExeption
+from domain.exeptions.base import ApplicationException
 
 
 @dataclass(eq=False)
-class LogicExeption(ApplicationExeption):
+class LogicExeption(ApplicationException):
 
     @property
-    def massage(self):
+    def message(self):
         return "В обработке запроса возникла ошибка"

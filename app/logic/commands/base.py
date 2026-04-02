@@ -4,8 +4,7 @@ from typing import Generic, TypeVar
 
 
 @dataclass(frozen=True)
-class BaseCommand(ABC): 
-    ...
+class BaseCommand(ABC): ...
 
 
 CT = TypeVar("CT", bound=BaseCommand)
