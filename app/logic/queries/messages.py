@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import Generic
+from typing import Generic, Iterable
 
-from domain.entities.messages import Chat
+from application.api.messages.filters import GetMessagesFilters
+from domain.entities.messages import Chat, Message
 from infra.repositories.messages.base import BaseChatsRepository, BaseMessagesRepository
 
 from logic.exeptions.messages import ChatNotFoundExeption
@@ -25,3 +26,25 @@ class GetChatDetailQueryHandler(BaseQueryHandler, Generic[QT, QR]):
             raise ChatNotFoundExeption(chat_oid=query.chat_oid)
 
         return chat
+
+@dataclass(frozen=True)
+class GetMessagesQuery(BaseQuery):
+    chat_oid: str
+    filters: GetMessagesFilters
+    
+    
+@dataclass(frozen=True)
+class GetMessagesQueryHandler(BaseQueryHandler):
+    messages_repository: BaseMessagesRepository
+    chats_repository: BaseChatsRepository
+    
+    async def handle(self, query: GetMessagesQuery) -> Iterable[Message]:
+        chat = await self.chats_repository.get_chat_by_oid(oid=query.chat_oid)
+
+        if not chat:
+            raise ChatNotFoundExeption(chat_oid=query.chat_oid)
+        
+        return await self.messages_repository.get_messages(
+            chat_oid=query.chat_oid,
+            filters=query.filters,
+        )

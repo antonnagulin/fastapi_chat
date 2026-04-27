@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 from domain.entities.messages import Chat
 
-from infra.repositories.messages.base import BaseChatsRepository
+from infra.repositories.messages.base import BaseChatsRepository, BaseMessagesRepository
 
 
 @dataclass
@@ -31,3 +31,19 @@ class MemoryChatRepository(BaseChatsRepository):
             return None
 
         return chat
+
+
+
+# @dataclass
+# class MemoryMessagesRepository(BaseMessagesRepository):
+
+#     async def add_message(self, chat_oid: str, message: Message) -> None:
+#         ...
+
+
+#     async def get_messages(
+#         self,
+#         chat_oid: str,
+#         filters: GetMessagesFilters
+#     ) -> tuple[Iterable[Message], int]:
+#         ...

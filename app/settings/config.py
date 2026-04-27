@@ -7,4 +7,8 @@ class Config(BaseSettings):
     mongodb_chat_database: str = Field(default="chat", alias="MONGODB_CHAT_DATABASE")
     mongodb_chat_collection: str = Field(
         default="chat", alias="MONGODB_CHAT_COLLECTION"
-    )  # noqa: E501
+    )
+    mongodb_messages_collection: str = Field(
+        default='messages', alias='MONGODB_MESSAGES_COLLECTION',
+    )
+    new_chats_event_topic: str = Field(default='new-chats-topic',)

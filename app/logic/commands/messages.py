@@ -29,6 +29,7 @@ class CreateChatCommandHandler(CommandHandler[CreateChatCommand, Chat]):
         new_chat = Chat.create_chat(title=title)
 
         await self.chat_repository.add_chat(new_chat)
+        self._mediator.publish(new_chat.pull_events())
 
         return new_chat
 
@@ -49,9 +50,7 @@ class CreateMessageCommandHandler(CommandHandler[CreateMessageCommand, Chat]):
         if not chat:
             raise ChatNotFoundExeption(chat_oid=command.chat_oid)
 
-        message = Message(text=Text(value=command.text))
+        message = Message(text=Text(value=command.text), chat_oid=command.chat_oid)
         chat.add_message(message)
-        await self.message_repository.add_message(
-            chat_oid=command.chat_oid, message=message
-        )
+        await self.message_repository.add_message(message=message)
         return message

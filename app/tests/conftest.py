@@ -1,5 +1,5 @@
 from infra.repositories.messages.base import BaseChatsRepository, BaseMessagesRepository
-from logic.mediator import Mediator
+from logic.mediator.base import Mediator
 from punq import Container
 from pytest import fixture
 

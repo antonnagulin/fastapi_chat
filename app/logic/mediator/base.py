@@ -10,11 +10,14 @@ from logic.exeptions.mediator import (
     CommandHandlersNotRegisteredException,
     EventHandlersNotRegisteredException,
 )
+from logic.mediator.command import CommandMediator
+from logic.mediator.event import EventMediator
+from logic.mediator.query import QueryMediator
 from logic.queries.base import QR, QT, BaseQuery, BaseQueryHandler
 
 
 @dataclass(eq=False)
-class Mediator:
+class Mediator(EventMediator, QueryMediator, CommandMediator):
     event_map: dict[ET, EventHandler] = field(
         default_factory=lambda: defaultdict(list),
         kw_only=True,
@@ -54,6 +57,7 @@ class Mediator:
         return result
 
     async def handle_command(self, command: BaseCommand) -> Iterable[CR]:
+        
         command_type = command.__class__
         handlers = self.commands_map.get(command_type)
 

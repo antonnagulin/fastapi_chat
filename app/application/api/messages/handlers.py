@@ -2,17 +2,20 @@ from domain.exeptions.base import ApplicationException
 from fastapi import Depends, HTTPException, status
 from fastapi.routing import APIRouter
 from logic.commands.messages import CreateChatCommand, CreateMessageCommand
-from logic.init import init_cotainer
-from logic.mediator import Mediator
-from logic.queries.messages import GetChatDetailQuery
+from logic.init import init_container
+from logic.mediator.base import Mediator
+from logic.queries.messages import GetChatDetailQuery, GetMessagesQuery
 from punq import Container
 
+from application.api.messages.filters import GetMessagesFilters
 from application.api.messages.schemas import (
     ChatDetailSchema,
     CreateChatInSchema,
     CreateChatOutSchema,
     CreateMessageInSchema,
     CreateMessageOutSchema,
+    GetMessagesQueryResponseSchema,
+    MessageDetailSchema,
 )
 from application.api.schemas import ErrorSchema
 
@@ -29,7 +32,7 @@ router = APIRouter(tags=["Chat"])
     },
 )
 async def create_chat_handler(
-    schema: CreateChatInSchema, container: Container = Depends(init_cotainer)
+    schema: CreateChatInSchema, container: Container = Depends(init_container)
 ):
     """Добавить новый чат"""
     mediator: Mediator = container.resolve(Mediator)
@@ -56,7 +59,7 @@ async def create_chat_handler(
 async def create_message_handler(
     chat_oid: str,
     schema: CreateMessageInSchema,
-    container: Container = Depends(init_cotainer),
+    container: Container = Depends(init_container),
 ) -> CreateMessageOutSchema:
     """Добавить новое сообщение в чат"""
 
@@ -84,7 +87,7 @@ async def create_message_handler(
 )
 async def get_chat_with_messages_handler(
     chat_oid: str,
-    container: Container = Depends(init_cotainer),
+    container: Container = Depends(init_container),
 ) -> ChatDetailSchema:
     """Получить информацию о чате"""
     
@@ -99,3 +102,36 @@ async def get_chat_with_messages_handler(
         )
 
     return ChatDetailSchema.from_entity(chat)
+
+
+@router.get(
+    '/{chat_oid}/messages',
+    status_code=status.HTTP_200_OK,
+    description='Ручка для получения всех отправленных сообщений в чате',
+    responses={
+        status.HTTP_200_OK: {'model': GetMessagesQueryResponseSchema},
+        status.HTTP_400_BAD_REQUEST: {'model': ErrorSchema},
+    },
+)
+async def get_chat_message_handler(
+    chat_oid: str,
+    filters: GetMessagesFilters = Depends(),
+    container: Container = Depends(init_container)
+) -> GetMessagesQueryResponseSchema:
+    mediator: Mediator = container.resolve(Mediator)
+    
+    try:
+        messages, count = await mediator.handle_query(
+            GetMessagesQuery(chat_oid=chat_oid, filters=filters.to_infra()),
+        )
+    except ApplicationException as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={'error': exception.message}
+        )
+    return GetMessagesQueryResponseSchema(
+        count=count,
+        limit=filters.limit,
+        offset=filters.offset,
+        items=[MessageDetailSchema.from_entity(message) for message in messages],
+    )
