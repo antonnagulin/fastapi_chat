@@ -9,6 +9,7 @@ from logic.exeptions.messages import (
     ChatNotFoundExeption,
     ChatWithThatTitleAlreadyExistsException,
 )
+from logic.mediator.event import EventMediator
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,7 @@ class CreateChatCommand(BaseCommand):
 @dataclass(frozen=True)
 class CreateChatCommandHandler(CommandHandler[CreateChatCommand, Chat]):
     chat_repository: BaseChatsRepository
+    _mediator: EventMediator
 
     async def handle(self, command: CreateChatCommand) -> Chat:
         if await self.chat_repository.check_chat_exists_by_title(command.title):
@@ -29,7 +31,7 @@ class CreateChatCommandHandler(CommandHandler[CreateChatCommand, Chat]):
         new_chat = Chat.create_chat(title=title)
 
         await self.chat_repository.add_chat(new_chat)
-        self._mediator.publish(new_chat.pull_events())
+        await self._mediator.publish(new_chat.pull_events())
 
         return new_chat
 
@@ -44,6 +46,7 @@ class CreateMessageCommand(BaseCommand):
 class CreateMessageCommandHandler(CommandHandler[CreateMessageCommand, Chat]):
     message_repository: BaseMessagesRepository
     chats_repository: BaseChatsRepository
+    _mediator: EventMediator
 
     async def handle(self, command: CreateMessageCommand) -> Message:
         chat = await self.chats_repository.get_chat_by_oid(oid=command.chat_oid)
@@ -53,4 +56,5 @@ class CreateMessageCommandHandler(CommandHandler[CreateMessageCommand, Chat]):
         message = Message(text=Text(value=command.text), chat_oid=command.chat_oid)
         chat.add_message(message)
         await self.message_repository.add_message(message=message)
+        await self._mediator.publish(chat.pull_events())
         return message

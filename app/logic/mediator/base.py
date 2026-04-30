@@ -32,7 +32,7 @@ class Mediator(EventMediator, QueryMediator, CommandMediator):
     )
 
     def register_event(self, event: ET, event_handlers: Iterable[EventHandler[ET, ER]]):
-        self.event_map[event].append(event_handlers)
+        self.event_map[event].extend(event_handlers)
 
     def register_command(
         self, command: CT, command_handlers: Iterable[CommandHandler[CT, CR]]
@@ -43,18 +43,14 @@ class Mediator(EventMediator, QueryMediator, CommandMediator):
         self.queries_map[query] = query_handler
 
     async def publish(self, events: Iterable[BaseEvent]) -> Iterable[ER]:
-        event_type = events.__class__
-        handlers = self.event_map.get(event_type)
+            result = []
 
-        if not handlers:
-            raise EventHandlersNotRegisteredException(event_type)
+            for event in events:
+                handlers: Iterable[EventHandler] = self.event_map[event.__class__]
 
-        result = []
+                result.extend([await handler.handle(event) for handler in handlers])
 
-        for event in events:
-            result.extend([await handler.handle(event) for handler in handlers])
-
-        return result
+            return result
 
     async def handle_command(self, command: BaseCommand) -> Iterable[CR]:
         

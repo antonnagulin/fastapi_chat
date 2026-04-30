@@ -14,7 +14,6 @@ async def test_create_chat_success(
     url = app.url_path_for("create_chat_handler")
     title = faker.text()[:100]
     response: Response = client.post(url=url, json={"title": title})
-
     assert response.is_success
 
     json_data = response.json()
