@@ -23,6 +23,7 @@ dependencies = [
     "aiokafka (>=0.13.0,<0.14.0)",
     "orjson (>=3.11.8,<4.0.0)",
     "websockets (>=16.0,<17.0)",
+    "aiojobs (>=1.4.0,<2.0.0)",
 ]
 
 
