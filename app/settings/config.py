@@ -15,4 +15,5 @@ class Config(BaseSettings):
     new_message_received_topic: str = Field(default='new-messages')
     
     kafka_url: str = Field(default="kafka:29092", alias='KAFKA_URL')
-    
+    telegram_bot_token: str= Field(alias="TELEGRAM_BOT_TOKEN")
+    chat_id: str= Field("CHAT_ID")

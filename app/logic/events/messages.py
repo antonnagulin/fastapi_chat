@@ -5,10 +5,19 @@ from domain.events.messages import (
     NewChatCreatedEvent,
     NewMessageReceivedEvent,
 )
+from infra.integrations.notifications.clients.base import BaseNotificationClient
+from infra.integrations.notifications.dots import Notification
 from infra.message_brokers.converters import convert_event_to_broker_message
 
 from logic.events.base import EventHandler, IntegrationEvent
 
+
+@dataclass
+class NewChatCreatedFromBrokerEvent(IntegrationEvent):
+    event_title: ClassVar[str] = 'New Chat Created From Broker Received'
+
+    chat_title: str
+    chat_oid: str
 
 @dataclass
 class NewMessageReceivedFromBrokerEvent(IntegrationEvent):
@@ -46,4 +55,43 @@ class NewMessageReceivedFromBrokerEventHandler(
         await self.connection_manager.send_all(
             key=event.chat_oid,
             bytes_=convert_event_to_broker_message(event=event)
+        )
+        
+@dataclass
+class NewChatCreatedFromBrokerEventHandler(
+    EventHandler[NewChatCreatedFromBrokerEvent, None]
+):
+    async def handle(self, event: NewChatCreatedFromBrokerEvent)-> None:
+        await self.connection_manager.send_all(
+            key="profile",
+            bytes_=convert_event_to_broker_message(event=event)
+        )
+
+
+@dataclass(kw_only=True)
+class SendTelegramOnNewChatCreatedHandler(
+    EventHandler[NewChatCreatedFromBrokerEvent, None]
+):
+    notification_client: BaseNotificationClient
+
+    async def handle(self, event: NewChatCreatedFromBrokerEvent) -> None:
+        await self.notification_client.send(
+            Notification(
+                title="🆕 Новый чат",
+                text=f"Название: {event.chat_title}\nID: {event.chat_oid}",
+            )
+        )
+        
+@dataclass(kw_only=True)
+class SendTelegramOnNewMessageHandler(
+    EventHandler[NewMessageReceivedFromBrokerEvent, None]
+):
+    notification_client: BaseNotificationClient
+
+    async def handle(self, event: NewMessageReceivedFromBrokerEvent) -> None:
+        await self.notification_client.send(
+            Notification(
+                title="💬 Новое сообщение",
+                text=f"{event.message_text}\n(chat: {event.chat_oid})",
+            )
         )

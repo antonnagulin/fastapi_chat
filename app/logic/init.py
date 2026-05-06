@@ -1,19 +1,21 @@
 from functools import lru_cache
-from uuid import uuid4
 
 from aiojobs import Scheduler
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from infra.websockets.managers import (
-    BaseConnectionManager,
-    ConnectionManager,
-)
 from domain.events.messages import NewChatCreatedEvent, NewMessageReceivedEvent
+from httpx import AsyncClient
+from infra.integrations.notifications.clients.base import BaseNotificationClient
+from infra.integrations.notifications.clients.telegram import TelegramNotificationClient
 from infra.message_brokers.base import BaseMessageBroker
 from infra.message_brokers.kafka import KafkaMessageBroker
 from infra.repositories.messages.base import BaseChatsRepository, BaseMessagesRepository
 from infra.repositories.messages.mongo import (
     MongoDBChatRepository,
     MongoDBMessagesRepository,
+)
+from infra.websockets.managers import (
+    BaseConnectionManager,
+    ConnectionManager,
 )
 from motor.motor_asyncio import AsyncIOMotorClient
 from punq import Container, Scope
@@ -27,9 +29,13 @@ from logic.commands.messages import (
 )
 from logic.events.messages import (
     NewChatCreatedEventHandler,
+    NewChatCreatedFromBrokerEvent,
+    NewChatCreatedFromBrokerEventHandler,
     NewMessageReceivedEventHandler,
     NewMessageReceivedFromBrokerEvent,
     NewMessageReceivedFromBrokerEventHandler,
+    SendTelegramOnNewChatCreatedHandler,
+    SendTelegramOnNewMessageHandler,
 )
 from logic.mediator.base import Mediator
 from logic.mediator.event import EventMediator
@@ -81,11 +87,19 @@ def _init_container() -> Container:
             producer=AIOKafkaProducer(bootstrap_servers=config.kafka_url),
             consumer=AIOKafkaConsumer(
                 bootstrap_servers=config.kafka_url,
-                group_id=f'chats-{uuid4()}',
+                # group_id=f'chats-{uuid4()}',
+                group_id='chat',
                 metadata_max_age_ms=30000,
             )
         )
 
+    def create_notification_client() -> BaseNotificationClient:
+        return TelegramNotificationClient(
+            bot_token=config.telegram_bot_token,
+            chat_id=config.chat_id,
+            http_client=AsyncClient(),
+        )
+    
     container.register(
         BaseMessageBroker,
         factory=create_message_broker,
@@ -93,10 +107,16 @@ def _init_container() -> Container:
     )
     
     container.register(
-            BaseConnectionManager,
-            instance=ConnectionManager(),
-            scope=Scope.singleton
-        )
+        BaseConnectionManager,
+        instance=ConnectionManager(),
+        scope=Scope.singleton
+    )
+
+    container.register(
+        BaseNotificationClient,
+        factory=create_notification_client,
+        scope=Scope.singleton
+    )
     
     container.register(
         BaseChatsRepository,
@@ -142,7 +162,17 @@ def _init_container() -> Container:
             connection_manager=container.resolve(BaseConnectionManager),
             broker_topic=config.new_message_received_topic,
         )
-        
+        new_chat_created_from_broker_event_handler = NewChatCreatedFromBrokerEventHandler(
+            message_broker=container.resolve(BaseMessageBroker),
+            connection_manager=container.resolve(BaseConnectionManager),
+            broker_topic=config.new_chats_event_topic,
+        )
+        new_chat_telegram_handler = SendTelegramOnNewChatCreatedHandler(
+            notification_client=container.resolve(BaseNotificationClient)
+        )
+        new_message_telegram_handler = SendTelegramOnNewMessageHandler(
+            notification_client=container.resolve(BaseNotificationClient)
+        )
         mediator.register_command(
             CreateChatCommand,
             [create_chat_handler],
@@ -167,10 +197,19 @@ def _init_container() -> Container:
             NewMessageReceivedEvent, 
             [new_message_received_handler]
         )
-        
         mediator.register_event(
             NewMessageReceivedFromBrokerEvent,
-            [new_message_received_from_broker_event_handler],
+            [
+                new_message_received_from_broker_event_handler,
+                new_message_telegram_handler
+            ],
+        )
+        mediator.register_event(
+            NewChatCreatedFromBrokerEvent,
+            [
+                new_chat_created_from_broker_event_handler,
+                new_chat_telegram_handler
+            ],
         )
  
         return mediator

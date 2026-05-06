@@ -1,5 +1,10 @@
-from domain.events.messages import NewMessageReceivedFromBrokerEvent
+import asyncio
+
 from infra.message_brokers.base import BaseMessageBroker
+from logic.events.messages import (
+    NewChatCreatedFromBrokerEvent,
+    NewMessageReceivedFromBrokerEvent,
+)
 from logic.init import init_container
 from logic.mediator.base import Mediator
 from settings.config import Config
@@ -17,15 +22,26 @@ async def consume_in_background():
     message_broker: BaseMessageBroker = container.resolve(BaseMessageBroker)
     mediator: Mediator = container.resolve(Mediator)
     
-    async for msg in message_broker.start_consuming(config.new_message_received_topic):
-        await mediator.publish([
-            NewMessageReceivedFromBrokerEvent(
-                message_oid=msg['message_oid'],
-                message_text=msg['message_text'],
-                chat_oid=msg['chat_oid'],
-            ),
-        ])
-
+    async for msg in message_broker.start_consuming([
+        config.new_message_received_topic,
+        config.new_chats_event_topic,
+    ]):
+        if msg["topic"] == config.new_message_received_topic:
+            
+            await mediator.publish([ 
+                NewMessageReceivedFromBrokerEvent(
+                    message_oid=msg['value']['message_oid'],
+                    message_text=msg['value']['message_text'],
+                    chat_oid=msg['value']['chat_oid'],
+                ),
+            ])
+        elif msg["topic"] == config.new_chats_event_topic:
+            await mediator.publish([ 
+                NewChatCreatedFromBrokerEvent( 
+                    chat_title=msg['value']['chat_title'],
+                    chat_oid=msg['value']['chat_oid'], 
+                ), 
+            ])
 
 async def close_message_broker():
     container = init_container()

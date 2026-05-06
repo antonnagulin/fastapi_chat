@@ -32,3 +32,23 @@ async def websocket_endpoint(
         await connection_manager.remove_connection(websocket=websocket, key=chat_oid)
 
 
+@router.websocket("/profile/")
+async def websocket_profile(
+    websocket: WebSocket,
+    container: Container = Depends(init_container),
+):
+    connection_manager: BaseConnectionManager = container.resolve(BaseConnectionManager)
+    await connection_manager.accept_connection(websocket=websocket, key="profile")
+
+    await websocket.send_text("You are now connected!")
+
+    try:
+        while True:
+
+            await websocket.receive_text()
+
+    except WebSocketDisconnect:
+
+        print("Connection broken")
+
+        await connection_manager.remove_connection(websocket=websocket, key="profile")

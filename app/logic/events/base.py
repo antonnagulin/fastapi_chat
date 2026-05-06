@@ -16,8 +16,8 @@ class IntegrationEvent(BaseEvent, ABC):
 
 @dataclass
 class EventHandler(ABC, Generic[ET, ER]):
-    message_broker: BaseMessageBroker
-    connection_manager: BaseConnectionManager
+    message_broker: BaseMessageBroker | None = None
+    connection_manager: BaseConnectionManager | None = None
     broker_topic: str | None = None
 
     @abstractmethod
