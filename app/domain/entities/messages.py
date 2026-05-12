@@ -3,10 +3,16 @@ from dataclasses import dataclass, field
 from domain.entities.base import BaseEntity
 from domain.events.messages import (
     ChatDeletedEvent,
+    ListenerAddedEvent,
     NewChatCreatedEvent,
     NewMessageReceivedEvent,
 )
 from domain.values.messages import Text, Title
+
+
+@dataclass(eq=False)
+class ChatListener(BaseEntity):
+    ...
 
 
 @dataclass(eq=False)
@@ -23,6 +29,7 @@ class Chat(BaseEntity):
     )
     title: Title
     is_deleted: bool = field(default=False, kw_only=True)
+    listeners: set[ChatListener] = field(default_factory=set(), kw_only=True)
 
     def add_message(self, message: Message):
         self.messages.add(message)
@@ -48,3 +55,11 @@ class Chat(BaseEntity):
     def delete(self):
         self.is_deleted = True
         self.register_event(ChatDeletedEvent(chat_oid=self.oid))
+        
+    def add_listener(self, listener: ChatListener):
+        self.listeners.add(listener)
+        self.register_event(
+            ListenerAddedEvent(
+                listener_oid=listener.oid
+            )
+        )

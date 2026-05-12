@@ -2,6 +2,8 @@ from domain.exeptions.base import ApplicationException
 from fastapi import Depends, HTTPException, status
 from fastapi.routing import APIRouter
 from logic.commands.messages import (
+    AddTelegramListenerCommand,
+    AddTelegramListenerCommandHandler,
     CreateChatCommand,
     CreateMessageCommand,
     DeleteChatCommand,
@@ -17,6 +19,8 @@ from punq import Container
 
 from application.api.messages.filters import GetAllChatsFilters, GetMessagesFilters
 from application.api.messages.schemas import (
+    AddTelegramListenerResponseSchema,
+    AddTelegramListenerSchema,
     ChatDetailSchema,
     CreateChatInSchema,
     CreateChatOutSchema,
@@ -194,3 +198,34 @@ async def get_chat_message_handler(
         offset=filters.offset,
         items=[MessageDetailSchema.from_entity(message) for message in messages],
     )
+    
+
+@router.post(
+    '/{chat_oid}/listeners/',
+    status_code = status.HTTP_201_CREATED,
+    summary='Add telegram tech support listener to chat',
+    description='Add telegram tech support listener to chat',
+    operation_id='addTelegramListenerToChat',
+    response_model=AddTelegramListenerResponseSchema,
+)
+async def add_chat_listener_handler(
+    chat_oid: str,
+    schema: AddTelegramListenerSchema,
+    container: Container = Depends(init_container),
+)-> AddTelegramListenerResponseSchema:
+    mediator: Mediator = container.resolve(Mediator)
+    
+    try:
+        listener, *_ = await mediator.handle_command(
+            AddTelegramListenerCommand(
+                chat_oid = chat_oid,
+                telegram_chat_oid = schema.telegram_chat_id,
+            )
+        )
+    except ApplicationException as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": exception.message},
+        )
+
+    return AddTelegramListenerResponseSchema.from_entity(listener=listener)

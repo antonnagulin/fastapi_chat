@@ -2,7 +2,12 @@ from functools import lru_cache
 
 from aiojobs import Scheduler
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from domain.events.messages import ChatDeletedEvent, NewChatCreatedEvent, NewMessageReceivedEvent
+from domain.events.messages import (
+    ChatDeletedEvent,
+    ListenerAddedEvent,
+    NewChatCreatedEvent,
+    NewMessageReceivedEvent,
+)
 from httpx import AsyncClient
 from infra.integrations.notifications.clients.base import BaseNotificationClient
 from infra.integrations.notifications.clients.telegram import TelegramNotificationClient
@@ -22,6 +27,8 @@ from punq import Container, Scope
 from settings.config import Config
 
 from logic.commands.messages import (
+    AddTelegramListenerCommand,
+    AddTelegramListenerCommandHandler,
     CreateChatCommand,
     CreateChatCommandHandler,
     CreateMessageCommand,
@@ -31,6 +38,7 @@ from logic.commands.messages import (
 )
 from logic.events.messages import (
     ChatDeletedEventHandler,
+    ListenerAddedEventHandler,
     NewChatCreatedEventHandler,
     NewChatCreatedFromBrokerEvent,
     NewChatCreatedFromBrokerEventHandler,
@@ -92,7 +100,6 @@ def _init_container() -> Container:
             producer=AIOKafkaProducer(bootstrap_servers=config.kafka_url),
             consumer=AIOKafkaConsumer(
                 bootstrap_servers=config.kafka_url,
-                # group_id=f'chats-{uuid4()}',
                 group_id='chat',
                 metadata_max_age_ms=30000,
             )
@@ -137,13 +144,16 @@ def _init_container() -> Container:
     container.register(DeleteChatCommandHandler)
     container.register(CreateChatCommandHandler)
     container.register(CreateMessageCommandHandler)
+    container.register(AddTelegramListenerCommandHandler)
     container.register(GetChatDetailQueryHandler)
     container.register(GetMessagesQueryHandler)
     container.register(GetAllChatsQueryHandler)
+    
 
         
     def init_mediator():
         mediator = Mediator()
+        #commands
         
         create_chat_handler = CreateChatCommandHandler(
             _mediator=mediator,
@@ -157,6 +167,17 @@ def _init_container() -> Container:
         delete_chat_handler = DeleteChatCommandHandler(
             _mediator=mediator,
             chats_repository=container.resolve(BaseChatsRepository)
+        )
+        add_telegram_listener_command = AddTelegramListenerCommandHandler(
+            _mediator=mediator,
+            chats_repository = container.resolve(BaseChatsRepository)
+        )
+        
+        #events
+        listener_added_event_handler = ListenerAddedEventHandler(
+            broker_topic=config.new_listener_added_topic,
+            message_broker=container.resolve(BaseMessageBroker),
+            connection_manager=container.resolve(BaseConnectionManager)
         )
         new_chat_created_event_handler = NewChatCreatedEventHandler(
             broker_topic=config.new_chats_event_topic,
@@ -189,6 +210,7 @@ def _init_container() -> Container:
         new_message_telegram_handler = SendTelegramOnNewMessageHandler(
             notification_client=container.resolve(BaseNotificationClient)
         )
+        #commands
         mediator.register_command(
             CreateChatCommand,
             [create_chat_handler],
@@ -201,6 +223,12 @@ def _init_container() -> Container:
             CreateMessageCommand,
             [create_message_handler]
         )
+        mediator.register_command(
+            AddTelegramListenerCommand,
+            [add_telegram_listener_command]
+        )
+        
+        #queryes
         mediator.register_query(
             GetChatDetailQuery,
             container.resolve(GetChatDetailQueryHandler),
@@ -212,6 +240,12 @@ def _init_container() -> Container:
         mediator.register_query(
             GetMessagesQuery,
             container.resolve(GetMessagesQueryHandler),
+        )
+        
+        #events
+        mediator.register_event(
+            ListenerAddedEvent,
+            [listener_added_event_handler]
         )
         mediator.register_event(
             NewChatCreatedEvent, 
