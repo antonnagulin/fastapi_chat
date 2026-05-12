@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from aiojobs import Scheduler
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from domain.events.messages import NewChatCreatedEvent, NewMessageReceivedEvent
+from domain.events.messages import ChatDeletedEvent, NewChatCreatedEvent, NewMessageReceivedEvent
 from httpx import AsyncClient
 from infra.integrations.notifications.clients.base import BaseNotificationClient
 from infra.integrations.notifications.clients.telegram import TelegramNotificationClient
@@ -26,8 +26,11 @@ from logic.commands.messages import (
     CreateChatCommandHandler,
     CreateMessageCommand,
     CreateMessageCommandHandler,
+    DeleteChatCommand,
+    DeleteChatCommandHandler,
 )
 from logic.events.messages import (
+    ChatDeletedEventHandler,
     NewChatCreatedEventHandler,
     NewChatCreatedFromBrokerEvent,
     NewChatCreatedFromBrokerEventHandler,
@@ -40,6 +43,8 @@ from logic.events.messages import (
 from logic.mediator.base import Mediator
 from logic.mediator.event import EventMediator
 from logic.queries.messages import (
+    GetAllChatsQuery,
+    GetAllChatsQueryHandler,
     GetChatDetailQuery,
     GetChatDetailQueryHandler,
     GetMessagesQuery,
@@ -129,10 +134,12 @@ def _init_container() -> Container:
         scope=Scope.singleton,
     )
 
+    container.register(DeleteChatCommandHandler)
     container.register(CreateChatCommandHandler)
     container.register(CreateMessageCommandHandler)
     container.register(GetChatDetailQueryHandler)
     container.register(GetMessagesQueryHandler)
+    container.register(GetAllChatsQueryHandler)
 
         
     def init_mediator():
@@ -147,13 +154,22 @@ def _init_container() -> Container:
             message_repository=container.resolve(BaseMessagesRepository),
             chats_repository=container.resolve(BaseChatsRepository)
         )
+        delete_chat_handler = DeleteChatCommandHandler(
+            _mediator=mediator,
+            chats_repository=container.resolve(BaseChatsRepository)
+        )
         new_chat_created_event_handler = NewChatCreatedEventHandler(
             broker_topic=config.new_chats_event_topic,
             message_broker=container.resolve(BaseMessageBroker),
             connection_manager=container.resolve(BaseConnectionManager)
         )
-        new_message_received_handler = NewMessageReceivedEventHandler(
+        new_message_received_event_handler = NewMessageReceivedEventHandler(
             broker_topic=config.new_message_received_topic,
+            message_broker=container.resolve(BaseMessageBroker),
+            connection_manager=container.resolve(BaseConnectionManager)
+        )
+        chat_deleted_event_handler = ChatDeletedEventHandler(
+            broker_topic=config.chat_deleted_topic,
             message_broker=container.resolve(BaseMessageBroker),
             connection_manager=container.resolve(BaseConnectionManager)
         )
@@ -178,12 +194,20 @@ def _init_container() -> Container:
             [create_chat_handler],
         )
         mediator.register_command(
+            DeleteChatCommand,
+            [delete_chat_handler]
+        )
+        mediator.register_command(
             CreateMessageCommand,
             [create_message_handler]
         )
         mediator.register_query(
             GetChatDetailQuery,
             container.resolve(GetChatDetailQueryHandler),
+        )
+        mediator.register_query(
+            GetAllChatsQuery,
+            container.resolve(GetAllChatsQueryHandler)
         )
         mediator.register_query(
             GetMessagesQuery,
@@ -195,7 +219,11 @@ def _init_container() -> Container:
         )
         mediator.register_event(
             NewMessageReceivedEvent, 
-            [new_message_received_handler]
+            [new_message_received_event_handler]
+        )
+        mediator.register_event(
+            ChatDeletedEvent,
+            [chat_deleted_event_handler]
         )
         mediator.register_event(
             NewMessageReceivedFromBrokerEvent,

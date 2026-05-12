@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
+from typing import Iterable
 
+from application.api.messages.filters import GetAllChatsFilters
 from domain.entities.messages import Chat
 
 from infra.repositories.messages.base import BaseChatsRepository, BaseMessagesRepository
@@ -31,19 +33,9 @@ class MemoryChatRepository(BaseChatsRepository):
             return None
 
         return chat
-
-
-
-# @dataclass
-# class MemoryMessagesRepository(BaseMessagesRepository):
-
-#     async def add_message(self, chat_oid: str, message: Message) -> None:
-#         ...
-
-
-#     async def get_messages(
-#         self,
-#         chat_oid: str,
-#         filters: GetMessagesFilters
-#     ) -> tuple[Iterable[Message], int]:
-#         ...
+    
+    async def get_all_chats(
+        self,
+        filters: GetAllChatsFilters
+    )-> Iterable[Chat]:
+        return self._saved_chats[filters.offset, filters.limit]

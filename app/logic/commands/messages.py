@@ -49,7 +49,7 @@ class CreateMessageCommandHandler(CommandHandler[CreateMessageCommand, Chat]):
     _mediator: EventMediator
 
     async def handle(self, command: CreateMessageCommand) -> Message:
-        chat = await self.chats_repository.get_chat_by_oid(oid=command.chat_oid)
+        chat: Chat = await self.chats_repository.get_chat_by_oid(oid=command.chat_oid)
         if not chat:
             raise ChatNotFoundExeption(chat_oid=command.chat_oid)
 
@@ -58,3 +58,26 @@ class CreateMessageCommandHandler(CommandHandler[CreateMessageCommand, Chat]):
         await self.message_repository.add_message(message=message)
         await self._mediator.publish(chat.pull_events())
         return message
+
+
+
+@dataclass(frozen=True)
+class DeleteChatCommand(BaseCommand):
+    chat_oid: str
+
+
+@dataclass(frozen=True)
+class DeleteChatCommandHandler(CommandHandler[DeleteChatCommand, None]):
+    chats_repository: BaseChatsRepository
+    _mediator: EventMediator
+
+    async def handle(self, command: DeleteChatCommand) -> None:
+        chat: Chat = await self.chats_repository.get_chat_by_oid(command.chat_oid)
+        if not chat:
+            raise ChatNotFoundExeption(command.chat_oid)
+        
+        await self.chats_repository.delete_chat_by_oid(chat_oid=command.chat_oid)
+        chat.delete()
+        await self._mediator.publish(chat.pull_events())        
+        
+

@@ -1,25 +1,84 @@
 from domain.exeptions.base import ApplicationException
 from fastapi import Depends, HTTPException, status
 from fastapi.routing import APIRouter
-from logic.commands.messages import CreateChatCommand, CreateMessageCommand
+from logic.commands.messages import (
+    CreateChatCommand,
+    CreateMessageCommand,
+    DeleteChatCommand,
+)
 from logic.init import init_container
 from logic.mediator.base import Mediator
-from logic.queries.messages import GetChatDetailQuery, GetMessagesQuery
+from logic.queries.messages import (
+    GetAllChatsQuery,
+    GetChatDetailQuery,
+    GetMessagesQuery,
+)
 from punq import Container
 
-from application.api.messages.filters import GetMessagesFilters
+from application.api.messages.filters import GetAllChatsFilters, GetMessagesFilters
 from application.api.messages.schemas import (
     ChatDetailSchema,
     CreateChatInSchema,
     CreateChatOutSchema,
     CreateMessageInSchema,
     CreateMessageOutSchema,
+    GetAllChatsQueryResponseSchema,
     GetMessagesQueryResponseSchema,
     MessageDetailSchema,
 )
 from application.api.schemas import ErrorSchema
 
 router = APIRouter(tags=["Chat"])
+
+@router.delete(
+    "/{chat_oid}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary='Delete chat after conversation ends',
+    description='Deletes chat by provided "chat_oid"',
+)
+async def delete_chat_handler(
+    chat_oid: str,
+    container: Container = Depends(init_container)
+)-> None:
+    mediator: Mediator = container.resolve(Mediator)
+    try:
+        await mediator.handle_command(DeleteChatCommand(chat_oid=chat_oid))
+    except ApplicationException as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={'error': exception.message}
+        )
+
+@router.get(
+    "/",
+    status_code=status.HTTP_200_OK,
+    description='Получить все открытые чаты на данный момент',
+    responses={
+        status.HTTP_200_OK: {'model': GetAllChatsQueryResponseSchema},
+        status.HTTP_400_BAD_REQUEST: {'model': ErrorSchema},  
+    },
+    summary='Get list all Chats',
+)
+async def get_all_chats_handler(
+    filters: GetAllChatsFilters = Depends(),
+    container: Container = Depends(init_container),
+)-> GetAllChatsQueryResponseSchema:
+    mediator: Mediator = container.resolve(Mediator)
+    
+    try:
+        chats, count = await mediator.handle_query(
+            GetAllChatsQuery(filters=filters)
+        )
+    except ApplicationException as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail={"error": exception.message}
+        )
+    return GetAllChatsQueryResponseSchema(
+        count=count,
+        limit=filters.limit,
+        offset=filters.offset,
+        items=[ChatDetailSchema.from_entity(chat) for chat in chats],
+    )
 
 
 @router.post(

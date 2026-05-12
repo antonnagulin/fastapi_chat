@@ -62,6 +62,10 @@ class ChatDetailSchema(BaseModel):
             created_at=chat.created_at,
         )
 
-class GetMessagesQueryResponseSchema(BaseQueryResponseSchema):
-    items: list[MessageDetailSchema]
     
+class GetMessagesQueryResponseSchema(BaseQueryResponseSchema[list[MessageDetailSchema]]):
+    ...
+    
+
+class GetAllChatsQueryResponseSchema(BaseQueryResponseSchema[list[ChatDetailSchema]]):
+    ...

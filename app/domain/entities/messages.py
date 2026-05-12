@@ -1,7 +1,11 @@
 from dataclasses import dataclass, field
 
 from domain.entities.base import BaseEntity
-from domain.events.messages import NewChatCreatedEvent, NewMessageReceivedEvent
+from domain.events.messages import (
+    ChatDeletedEvent,
+    NewChatCreatedEvent,
+    NewMessageReceivedEvent,
+)
 from domain.values.messages import Text, Title
 
 
@@ -18,6 +22,7 @@ class Chat(BaseEntity):
         kw_only=True,
     )
     title: Title
+    is_deleted: bool = field(default=False, kw_only=True)
 
     def add_message(self, message: Message):
         self.messages.add(message)
@@ -39,3 +44,7 @@ class Chat(BaseEntity):
             )
         )
         return new_chat
+
+    def delete(self):
+        self.is_deleted = True
+        self.register_event(ChatDeletedEvent(chat_oid=self.oid))

@@ -5,6 +5,7 @@ from application.api.messages.filters import GetMessagesFilters
 from domain.entities.messages import Chat, Message
 from motor.core import AgnosticClient
 
+from infra.repositories.filters.messages import GetAllChatsFilters
 from infra.repositories.messages.base import BaseChatsRepository, BaseMessagesRepository
 from infra.repositories.messages.converters import (
     convert_chat_document_to_entity,
@@ -41,6 +42,23 @@ class MongoDBChatRepository(BaseChatsRepository, BaseMongoDBRepository):
 
     async def add_chat(self, chat: Chat) -> None:
         await self._collection.insert_one(convert_chat_entity_to_document(chat))
+
+    async def get_all_chats(
+        self,
+        filters: GetAllChatsFilters
+    )-> tuple[list[Chat], int]:
+        cursor = self._collection.find().skip(filters.offset).limit(filters.limit)
+
+        chats = [
+            convert_chat_document_to_entity(chat_document=chat_document)
+            async for chat_document in cursor
+        ]
+        count = await self._collection.count_documents(filter={})
+
+        return chats, count
+    
+    async def delete_chat_by_oid(self, chat_oid: str) -> None:
+        await self._collection.delete_one({'oid': chat_oid})
 
 
 @dataclass

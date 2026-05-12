@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterable
 
-from application.api.messages.filters import GetMessagesFilters
+from application.api.messages.filters import GetAllChatsFilters, GetMessagesFilters
 from domain.entities.messages import Chat, Message
 
 
@@ -18,6 +18,15 @@ class BaseChatsRepository(ABC):
     @abstractmethod
     async def get_chat_by_oid(self, oid: str) -> Chat | None: ...
 
+    @abstractmethod
+    async def get_all_chats(
+        self,
+        filters: GetAllChatsFilters 
+        ) -> Iterable[Chat]: ...
+    
+    @abstractmethod    
+    async def delete_chat_by_oid(self, chat_oid: str) -> None: ...
+    
 
 @dataclass
 class BaseMessagesRepository(ABC):

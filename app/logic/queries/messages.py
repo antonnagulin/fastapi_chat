@@ -3,6 +3,7 @@ from typing import Generic, Iterable
 
 from application.api.messages.filters import GetMessagesFilters
 from domain.entities.messages import Chat, Message
+from infra.repositories.filters.messages import GetAllChatsFilters
 from infra.repositories.messages.base import BaseChatsRepository, BaseMessagesRepository
 
 from logic.exeptions.messages import ChatNotFoundExeption
@@ -48,3 +49,19 @@ class GetMessagesQueryHandler(BaseQueryHandler):
             chat_oid=query.chat_oid,
             filters=query.filters,
         )
+        
+
+@dataclass(frozen=True)
+class GetAllChatsQuery(BaseQuery):
+    filters: GetAllChatsFilters
+    
+    
+@dataclass(frozen=True)
+class GetAllChatsQueryHandler(BaseQueryHandler):
+    chats_repository: BaseChatsRepository
+    
+    async def handle(self, query: GetAllChatsQuery) -> Iterable[Chat]:
+        return await self.chats_repository.get_all_chats(
+            filters=query.filters,
+        )
+        
