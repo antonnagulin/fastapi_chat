@@ -1,4 +1,4 @@
-# Async Chat (Fastapi + MongoDB)
+# Async Chat (Fastapi + MongoDB + Kafka + Telegram notification)
 
 
 ## Установка и запуск
@@ -17,19 +17,18 @@ make all
 
 - fastapi будет доступен на `http://localhost:8000`
 - Документация (Swagger) на `http://localhost:8000/api/docs`
-
+- UI Kafka на `http://127.0.0.1:8090/`
+- UI mongo на `http://localhost:28081`
 
 
 ## Makefile команды
 
 ```bash
-# Просмотр логов
-make app-logs 
+# Просмотр логов fast api
+make app-logs  
 
-# Запуск тестов
-make test
+# просмотр логов kafka
+make messaging-logs
 
-# Остановить контейнеры:
-make app-down 
 ```
 ---
